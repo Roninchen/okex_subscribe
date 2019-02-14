@@ -1,0 +1,20 @@
+weixin:
+  wxurl: https://u.ifeige.cn/api/message/send
+
+coin:
+  btc: BTC-USD-190329
+  eth: ETH-USD-190329
+  bch: BCH-USD-190329
+  eos: EOS-USD-190329
+  ltc: LTC-USD-190329
+
+okex:
+  endpoint: https://www.okex.me/
+  api_key:
+  secret_key:
+
+ifeige:
+  secret:
+  app_key:
+  template_id: 5uZIvSm5GAdUR1X25HNpjuOp6jSiL88v4opn4a4GLa0
+  color: "#173177"

@@ -7,6 +7,7 @@ import (
 	"github.com/astaxie/beego/logs"
 	"github.com/cihub/seelog"
 	"github.com/okcoin-okex/okex-go-sdk-api"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
 	"okex/conf"
@@ -14,11 +15,6 @@ import (
 	"time"
 )
 const WXURL = "https://u.ifeige.cn/api/message/send"
-const  LTC  = "LTC-USD-190329"
-const  BTC  = "BTC-USD-190329"
-const  ETH  = "ETH-USD-190329"
-const  BCH  = "BCH-USD-190329"
-const  EOS  = "EOS-USD-190329"
 
 var maps = make(map[string]string)
 
@@ -37,7 +33,7 @@ func main() {
 	defer seelog.Flush()
 	n := 1
 	// Verify storage every 5min.
-	verifyTicker1 := time.NewTicker(time.Second * 10)
+	verifyTicker1 := time.NewTicker(time.Minute * 5)
 	go func() {
 		for _ = range verifyTicker1.C {
 			seelog.Info("heartbeat")
@@ -46,11 +42,11 @@ func main() {
 	verifyTicker := time.NewTicker(time.Second * 3 )
 	seelog.Info("监控开始")
 	for _ = range verifyTicker.C {
-		MarketRun(ETH, "ETH", n)
-		MarketRun(BCH, "BCH", n)
-		MarketRun(LTC, "LTC", n)
-		MarketRun(EOS, "EOS", n)
-		MarketRun(BTC, "BTC", n)
+		MarketRun(viper.GetString("coin.eth"), "ETH", n)
+		MarketRun(viper.GetString("coin.bch"), "BCH", n)
+		MarketRun(viper.GetString("coin.ltc"), "LTC", n)
+		MarketRun(viper.GetString("coin.eos"), "EOS", n)
+		MarketRun(viper.GetString("coin.btc"), "BTC", n)
 		if n > 1000000 {
 			n--
 		} else {
@@ -62,8 +58,8 @@ func main() {
 func NewOKExClient() *okex.Client {
 	var config okex.Config
 	config.Endpoint = "https://www.okex.me/"
-	config.ApiKey = ""
-	config.SecretKey = ""
+	config.ApiKey = viper.GetString("okex.api_key")
+	config.SecretKey = viper.GetString("okex.secret_key")
 	config.Passphrase = ""
 	config.TimeoutSecond = 45
 	config.IsPrint = false
