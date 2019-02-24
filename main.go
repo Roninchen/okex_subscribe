@@ -39,14 +39,28 @@ func main() {
 			seelog.Info("heartbeat")
 		}
 	}()
+
+	btcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
+	ethChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
+	bchChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
+	eosChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
+	ltcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
+
+	go sendWork(btcChan,4)
+	go sendWork(ethChan,4)
+	go sendWork(bchChan,4)
+	go sendWork(eosChan,4)
+	go sendWork(ltcChan,4)
+
 	verifyTicker := time.NewTicker(time.Second * 3 )
 	seelog.Info("监控开始")
+
 	for _ = range verifyTicker.C {
-		MarketRun(viper.GetString("coin.eth"), "ETH", n)
-		MarketRun(viper.GetString("coin.bch"), "BCH", n)
-		MarketRun(viper.GetString("coin.ltc"), "LTC", n)
-		MarketRun(viper.GetString("coin.eos"), "EOS", n)
-		MarketRun(viper.GetString("coin.btc"), "BTC", n)
+		go MarketRun(viper.GetString("coin.eth"), "ETH", n,ethChan)
+		go MarketRun(viper.GetString("coin.bch"), "BCH", n,bchChan)
+		go MarketRun(viper.GetString("coin.ltc"), "LTC", n,ltcChan)
+		go MarketRun(viper.GetString("coin.eos"), "EOS", n,eosChan)
+		go MarketRun(viper.GetString("coin.btc"), "BTC", n,btcChan)
 		if n > 1000000 {
 			n--
 		} else {
@@ -120,7 +134,7 @@ func (req *Req)Init() *Req {
 	return req
 }
 
-func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult) *Req{
+func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult,ch <-chan *okex.FuturesInstrumentLiquidationResult,n int) *Req{
 	req.Data.First.Value = result.InstrumentId
 	if result.Type == 3 {
 		req.Data.Keyword1.Value = "卖出平多"
@@ -129,12 +143,39 @@ func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult) *Req{
 	}
 	req.Data.Keyword2.Value = "易达"
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
-	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v",result.Price,result.Size)
+	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
+	i := 0
+	for  {
+		if i > n {
+			break
+		}
+		if len(ch) == 0 {
+			break
+		}
+		req.Data.Remark.Value =req.Data.Remark.Value + LiquidationResult2String(<-ch)
+		i++
+	}
 
 	return req
 }
 
-func MarketRun(CoinId string,coin string,n int)  {
+func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) (string) {
+	s := fmt.Sprintf("%s","=======================\n")
+	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
+	if result.Type == 3 {
+		s = s+fmt.Sprintf("爆仓类型:%v \n","卖出平多")
+	}else {
+		s = s+fmt.Sprintf("爆仓类型:%v \n","买入平空")
+	}
+	s = s+fmt.Sprintf("时间:%v \n",time.Now().Format("2006/1/2 15:04:05"))
+	s = s+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
+	return s
+}
+
+func MarketRun(CoinId string,coin string,n int,ch chan<- *okex.FuturesInstrumentLiquidationResult)  {
+	// To avoid deadlock, channel must be closed.
+	defer close(ch)
+
 	client := NewOKExClient()
 	list, err := client.GetFuturesInstrumentLiquidation(CoinId, 1,1,0,1)
 	if err!=nil {
@@ -153,9 +194,22 @@ func MarketRun(CoinId string,coin string,n int)  {
 	if n == 1 {
 		return
 	}
+	ch <- &list.LiquidationList[0]
+}
+
+func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,n int){
+	for {
+		select {
+		case v:= <-ch :
+			send(v,ch,n)
+		}
+	}
+}
+
+func send(result *okex.FuturesInstrumentLiquidationResult,ch <-chan *okex.FuturesInstrumentLiquidationResult,n int)  {
 	req := new(Req)
 	req.Init()
-	req.Make(list.LiquidationList[0])
+	req.Make(*result,ch,n)
 	data, err := json.Marshal(req)
 	logs.Info("json:/n",string(data))
 	bytes.NewReader(data)
@@ -179,6 +233,6 @@ func MarketRun(CoinId string,coin string,n int)  {
 		seelog.Error(err)
 	}
 
-	seelog.Info("list:/n",list.LiquidationList)
+	seelog.Info("list:/n",*result)
 }
 
