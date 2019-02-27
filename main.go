@@ -46,21 +46,21 @@ func main() {
 	eosChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	ltcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 
-	go sendWork(btcChan,4)
 	go sendWork(ethChan,4)
 	go sendWork(bchChan,4)
-	go sendWork(eosChan,4)
 	go sendWork(ltcChan,4)
+	go sendWork(eosChan,4)
+	go sendWork(btcChan,4)
 
 	verifyTicker := time.NewTicker(time.Second * 3 )
 	seelog.Info("监控开始")
 
 	for _ = range verifyTicker.C {
-		go MarketRun(viper.GetString("coin.eth"), "ETH", n,ethChan)
-		go MarketRun(viper.GetString("coin.bch"), "BCH", n,bchChan)
-		go MarketRun(viper.GetString("coin.ltc"), "LTC", n,ltcChan)
-		go MarketRun(viper.GetString("coin.eos"), "EOS", n,eosChan)
-		go MarketRun(viper.GetString("coin.btc"), "BTC", n,btcChan)
+		MarketRun(viper.GetString("coin.eth"), "ETH", n,ethChan)
+		MarketRun(viper.GetString("coin.bch"), "BCH", n,bchChan)
+		MarketRun(viper.GetString("coin.ltc"), "LTC", n,ltcChan)
+		MarketRun(viper.GetString("coin.eos"), "EOS", n,eosChan)
+		MarketRun(viper.GetString("coin.btc"), "BTC", n,btcChan)
 		if n > 1000000 {
 			n--
 		} else {
@@ -123,9 +123,9 @@ type remark struct {
 }
 
 func (req *Req)Init() *Req {
-	req.Secret = ""
-	req.AppKey = ""
-	req.TemplateId = ""
+	req.Secret = viper.GetString("ifeige.secret")
+	req.AppKey = viper.GetString("ifeige.app_key")
+	req.TemplateId = viper.GetString("ifeige.template_id")
 	req.Data.First.Color = "#173177"
 	req.Data.Keyword1.Color = "#173177"
 	req.Data.Keyword2.Color = "#173177"
@@ -159,7 +159,7 @@ func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult,ch <-chan *ok
 	return req
 }
 
-func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) (string) {
+func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) string {
 	s := fmt.Sprintf("%s","=======================\n")
 	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
 	if result.Type == 3 {
@@ -195,6 +195,7 @@ func MarketRun(CoinId string,coin string,n int,ch chan<- *okex.FuturesInstrument
 		return
 	}
 	ch <- &list.LiquidationList[0]
+	return
 }
 
 func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,n int){
