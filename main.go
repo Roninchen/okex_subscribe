@@ -16,7 +16,9 @@ import (
 )
 const WXURL = "https://u.ifeige.cn/api/message/send"
 
+
 var maps = make(map[string]string)
+
 
 func init() {
 	maps["BTC"] = ""
@@ -39,7 +41,6 @@ func main() {
 			seelog.Info("heartbeat")
 		}
 	}()
-
 	btcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	ethChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	bchChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
@@ -123,9 +124,9 @@ type remark struct {
 }
 
 func (req *Req)Init() *Req {
-	req.Secret = viper.GetString("ifeige.secret")
-	req.AppKey = viper.GetString("ifeige.app_key")
-	req.TemplateId = viper.GetString("ifeige.template_id")
+	req.Secret = viper.GetString("ifeige2.secret")
+	req.AppKey = viper.GetString("ifeige2.app_key")
+	req.TemplateId = viper.GetString("ifeige2.template_id")
 	req.Data.First.Color = "#173177"
 	req.Data.Keyword1.Color = "#173177"
 	req.Data.Keyword2.Color = "#173177"
@@ -141,7 +142,7 @@ func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult,ch <-chan *ok
 	}else {
 		req.Data.Keyword1.Value = "买入平空"
 	}
-	req.Data.Keyword2.Value = "易达"
+	req.Data.Keyword2.Value = "chauncy"
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
 	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
 	i := 0
@@ -174,7 +175,7 @@ func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) s
 
 func MarketRun(CoinId string,coin string,n int,ch chan<- *okex.FuturesInstrumentLiquidationResult)  {
 	// To avoid deadlock, channel must be closed.
-	defer close(ch)
+	//defer close(ch)
 
 	client := NewOKExClient()
 	list, err := client.GetFuturesInstrumentLiquidation(CoinId, 1,1,0,1)
@@ -201,7 +202,7 @@ func MarketRun(CoinId string,coin string,n int,ch chan<- *okex.FuturesInstrument
 func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,n int){
 	for {
 		select {
-		case v:= <-ch :
+		case  v:=<-ch :
 			send(v,ch,n)
 		}
 	}
@@ -236,4 +237,3 @@ func send(result *okex.FuturesInstrumentLiquidationResult,ch <-chan *okex.Future
 
 	seelog.Info("list:/n",*result)
 }
-
