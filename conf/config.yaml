@@ -18,3 +18,10 @@ ifeige:
   app_key:
   template_id: 5uZIvSm5GAdUR1X25HNpjuOp6jSiL88v4opn4a4GLa0
   color: "#173177"
+ifeige2:
+  secret:
+  app_key:
+  template_id: 5uZIvSm5GAdUR1X25HNpjuOp6jSiL88v4opn4a4GLa0
+  color: "#173177"
+message:
+  max: 4
