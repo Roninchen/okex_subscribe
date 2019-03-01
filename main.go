@@ -33,8 +33,9 @@ func main() {
 	// Load log.
 	scheduler.SetLogger("logConfig.xml")
 	defer seelog.Flush()
-	n := 1
-	// Verify storage every 5min.
+	FSB := viper.GetInt("message.first_send")
+	seelog.Info("first send button ",FSB)
+	// Verify every 5min.
 	verifyTicker1 := time.NewTicker(time.Minute * 5)
 	go func() {
 		for _ = range verifyTicker1.C {
@@ -58,15 +59,15 @@ func main() {
 	seelog.Info("监控开始")
 
 	for _ = range verifyTicker.C {
-		go MarketRun(viper.GetString("coin.eth"), "ETH", n,ethChan)
-		go MarketRun(viper.GetString("coin.bch"), "BCH", n,bchChan)
-		go MarketRun(viper.GetString("coin.ltc"), "LTC", n,ltcChan)
-		go MarketRun(viper.GetString("coin.eos"), "EOS", n,eosChan)
-		go MarketRun(viper.GetString("coin.btc"), "BTC", n,btcChan)
-		if n > 1000000 {
-			n--
+		go MarketRun(ethChan,viper.GetString("coin.eth"), "ETH", FSB)
+		go MarketRun(bchChan,viper.GetString("coin.bch"), "BCH", FSB)
+		go MarketRun(ltcChan,viper.GetString("coin.ltc"), "LTC", FSB)
+		go MarketRun(eosChan,viper.GetString("coin.eos"), "EOS", FSB)
+		go MarketRun(btcChan,viper.GetString("coin.btc"), "BTC", FSB)
+		if FSB > 1000000 {
+			FSB--
 		} else {
-			n++
+			FSB++
 		}
 	}
 }
@@ -125,9 +126,9 @@ type remark struct {
 }
 
 func (req *Req)Init() *Req {
-	req.Secret = viper.GetString("ifeige.secret")
-	req.AppKey = viper.GetString("ifeige.app_key")
-	req.TemplateId = viper.GetString("ifeige.template_id")
+	req.Secret = viper.GetString("ifeige2.secret")
+	req.AppKey = viper.GetString("ifeige2.app_key")
+	req.TemplateId = viper.GetString("ifeige2.template_id")
 	req.Data.First.Color = "#173177"
 	req.Data.Keyword1.Color = "#173177"
 	req.Data.Keyword2.Color = "#173177"
@@ -136,7 +137,7 @@ func (req *Req)Init() *Req {
 	return req
 }
 
-func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult,ch <-chan *okex.FuturesInstrumentLiquidationResult,n int) *Req{
+func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int) *Req{
 	req.Data.First.Value = result.InstrumentId
 	if result.Type == 3 {
 		req.Data.Keyword1.Value = "卖出平多"
@@ -148,7 +149,7 @@ func (req *Req)Make(result okex.FuturesInstrumentLiquidationResult,ch <-chan *ok
 	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
 	i := 0
 	for  {
-		if i > n {
+		if i > max {
 			break
 		}
 		if len(ch) == 0 {
@@ -174,7 +175,7 @@ func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) s
 	return s
 }
 
-func MarketRun(CoinId string,coin string,n int,ch chan<- *okex.FuturesInstrumentLiquidationResult)  {
+func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,coin string,n int)  {
 	// To avoid deadlock, channel must be closed.
 	//defer close(ch)
 
@@ -204,16 +205,16 @@ func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,max int){
 	for {
 		select {
 		case  v:=<-ch :
-			send(v,ch,max)
+			send(ch,v,max)
 			time.Sleep(2*time.Second)
 		}
 	}
 }
 
-func send(result *okex.FuturesInstrumentLiquidationResult,ch <-chan *okex.FuturesInstrumentLiquidationResult,n int)  {
+func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.FuturesInstrumentLiquidationResult,max int)  {
 	req := new(Req)
 	req.Init()
-	req.Make(*result,ch,n)
+	req.Make(ch,*result,max)
 	data, err := json.Marshal(req)
 	logs.Info("json:/n",string(data))
 	bytes.NewReader(data)

@@ -25,3 +25,4 @@ ifeige2:
   color: "#173177"
 message:
   max: 4
+  first_send: 1
