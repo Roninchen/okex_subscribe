@@ -55,7 +55,8 @@ func main() {
 	go sendWork(eosChan,max)
 	go sendWork(btcChan,max)
 
-	verifyTicker := time.NewTicker(time.Second * 1 )
+	rate := viper.GetInt64("message.rate")
+	verifyTicker := time.NewTicker(time.Millisecond * time.Duration(rate) )
 	seelog.Info("监控开始")
 
 	for _ = range verifyTicker.C {
@@ -144,7 +145,7 @@ func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result ok
 	}else {
 		req.Data.Keyword1.Value = "买入平空"
 	}
-	req.Data.Keyword2.Value = "chauncy"
+	req.Data.Keyword2.Value = viper.GetString("message.version")
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
 	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
 	i := 0

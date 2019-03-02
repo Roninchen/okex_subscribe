@@ -26,3 +26,6 @@ ifeige2:
 message:
   max: 4
   first_send: 1
+  version: chauncy_v1.1
+  rate: 500
+
