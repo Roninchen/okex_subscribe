@@ -52,10 +52,11 @@ func main() {
 		}
 	}()
 
-
 	verifyTickerFuture := time.NewTicker(time.Second * 10)
 	if viper.GetInt("huobi.position.enable") ==1 {
 		go FutureContractPositionWorker(verifyTickerFuture,"EOS")
+		go FutureContractPositionWorker(verifyTickerFuture,"ETH")
+		go FutureContractPositionWorker(verifyTickerFuture,"LTC")
 	}
 
 	btcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
@@ -118,6 +119,10 @@ func FutureContractPositionWorker(t *time.Ticker,coin string) {
 		for k,v:=range Contract {
 			seelog.Info("==========第",k,"个订单==========")
 			seelog.Info(v)
+			seelog.Info("币种：",v.ContractCode,"收益率：",v.ProfitRate)
+			if v.ProfitRate < 0 {
+				seelog.Info("亏损警报	>>>","币种：",v.ContractCode,"收益率：",v.ProfitRate)
+			}
 		}
 	}
 }
