@@ -39,6 +39,13 @@
 			"revisionTime": "2017-01-30T13:45:32Z"
 		},
 		{
+			"checksumSHA1": "blOHP3HPYU+IeV6yWCalQuuM+zE=",
+			"origin": "hbfuture/vendor/github.com/dgrijalva/jwt-go",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "12f3852621e3e29eef73fcf947ee2e53e751ae8c",
+			"revisionTime": "2019-03-04T06:48:10Z"
+		},
+		{
 			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "ccc981bf80385c528a65fbfdd49bf2d8da22aa23",
@@ -184,6 +191,24 @@
 			"checksumSHA1": "d3jYBfW+YmOxsa5o8m6XyywVbIo=",
 			"path": "gopkg.in/yaml.v2",
 			"revision": ""
+		},
+		{
+			"checksumSHA1": "YRlLqYWewGKTcfbXbVe5PXXrnow=",
+			"path": "hbfuture/config",
+			"revision": "12f3852621e3e29eef73fcf947ee2e53e751ae8c",
+			"revisionTime": "2019-03-04T06:48:10Z"
+		},
+		{
+			"checksumSHA1": "X6Yp0EeJEu3BTwxe+WgkOtJQ1Ds=",
+			"path": "hbfuture/services",
+			"revision": "12f3852621e3e29eef73fcf947ee2e53e751ae8c",
+			"revisionTime": "2019-03-04T06:48:10Z"
+		},
+		{
+			"checksumSHA1": "888KnNyJm0Sg2hgjqLOVh4HIAn0=",
+			"path": "hbfuture/untils",
+			"revision": "12f3852621e3e29eef73fcf947ee2e53e751ae8c",
+			"revisionTime": "2019-03-04T06:48:10Z"
 		}
 	],
 	"rootPath": "okex"

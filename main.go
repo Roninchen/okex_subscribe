@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/astaxie/beego/logs"
 	"github.com/cihub/seelog"
 	"github.com/okcoin-okex/okex-go-sdk-api"
 	"github.com/spf13/viper"
+	"hbfuture/config"
+	"hbfuture/services"
 	"io/ioutil"
 	"net/http"
 	"okex/conf"
+	"okex/model"
 	"okex/scheduler"
 	"time"
 )
@@ -33,8 +35,15 @@ func main() {
 	// Load log.
 	scheduler.SetLogger("logConfig.xml")
 	defer seelog.Flush()
+
+	//first send button
 	FSB := viper.GetInt("message.first_send")
 	seelog.Info("first send button ",FSB)
+
+	//API
+	config.ACCESS_KEY = viper.GetString("huobi.api.access_key")
+	config.SECRET_KEY = viper.GetString("huobi.api.secret_key")
+
 	// Verify every 5min.
 	verifyTicker1 := time.NewTicker(time.Minute * 5)
 	go func() {
@@ -42,6 +51,13 @@ func main() {
 			seelog.Info("heartbeat")
 		}
 	}()
+
+
+	verifyTickerFuture := time.NewTicker(time.Second * 10)
+	if viper.GetInt("huobi.position.enable") ==1 {
+		go FutureContractPositionWorker(verifyTickerFuture,"EOS")
+	}
+
 	btcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	ethChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	bchChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
@@ -49,14 +65,18 @@ func main() {
 	ltcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
 	max :=viper.GetInt("message.max")
 	seelog.Info("max: ",max)
-	go sendWork(ethChan,max)
-	go sendWork(bchChan,max)
-	go sendWork(ltcChan,max)
-	go sendWork(eosChan,max)
-	go sendWork(btcChan,max)
+
+
+	if viper.GetInt("okex.enable") ==1 {
+		go sendWork(ethChan, max)
+		go sendWork(bchChan, max)
+		go sendWork(ltcChan, max)
+		go sendWork(eosChan, max)
+		go sendWork(btcChan, max)
+	}
 
 	rate := viper.GetInt64("message.rate")
-	verifyTicker := time.NewTicker(time.Millisecond * time.Duration(rate) )
+	verifyTicker := time.NewTicker(time.Second * time.Duration(rate) )
 	seelog.Info("监控开始")
 
 	for _ = range verifyTicker.C {
@@ -71,6 +91,35 @@ func main() {
 			FSB++
 		}
 	}
+
+}
+
+func FutureContractPositionWorker(t *time.Ticker,coin string) {
+	for _=range t.C{
+		var result struct{
+			Status string `json:"status"`
+			Data   []model.ContractPositionInfo `json:"data"`
+			TS     int64 `json:"ts"`
+		}
+		var Contract []model.ContractPositionInfo
+		jsonStr, response, err := services.FutureContractPositionInfo(coin)
+		if err!=nil {
+			seelog.Info("FutureContractPositionInfo err:",err)
+			continue
+		}
+		seelog.Info("future:",jsonStr)
+		err=json.NewDecoder(response.Body).Decode(&result)
+		if err != nil {
+			seelog.Info("json2Future err:",err)
+			continue
+		}
+		seelog.Info("res:",result)
+		Contract = result.Data
+		for k,v:=range Contract {
+			seelog.Info("==========第",k,"个订单==========")
+			seelog.Info(v)
+		}
+	}
 }
 
 func NewOKExClient() *okex.Client {
@@ -83,97 +132,11 @@ func NewOKExClient() *okex.Client {
 	config.IsPrint = false
 	config.I18n = okex.ENGLISH
 
-	req := new(Req)
+	req := new(model.Req)
 	req.Init()
 
 	client := okex.NewClient(config)
 	return client
-}
-
-type Req struct {
-	Secret string `json:"secret"`
-	AppKey string `json:"app_key"`
-	TemplateId string `json:"template_id"`
-	Url      string `json:"url"`
-	Data    data `json:"data"`
-}
-
-type data struct {
-	First first `json:"first"`
-	Keyword1 keyword1 `json:"keyword1"`
-	Keyword2 keyword2 `json:"keyword2"`
-	Keyword3 keyword3 `json:"keyword3"`
-	Remark remark `json:"remark"`
-}
-type first struct {
-	Value string `json:"value"`
-	Color string `json:"color"`
-}
-type keyword1 struct {
-	Value string `json:"value"`
-	Color string `json:"color"`
-}
-type keyword2 struct {
-	Value string `json:"value"`
-	Color string `json:"color"`
-}
-type keyword3 struct {
-	Value string `json:"value"`
-	Color string `json:"color"`
-}
-type remark struct {
-	Value string `json:"value"`
-	Color string `json:"color"`
-}
-
-func (req *Req)Init() *Req {
-	req.Secret = viper.GetString("ifeige2.secret")
-	req.AppKey = viper.GetString("ifeige2.app_key")
-	req.TemplateId = viper.GetString("ifeige2.template_id")
-	req.Data.First.Color = "#173177"
-	req.Data.Keyword1.Color = "#173177"
-	req.Data.Keyword2.Color = "#173177"
-	req.Data.Keyword3.Color = "#173177"
-	req.Data.Remark.Color = "#173177"
-	return req
-}
-
-func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int) *Req{
-	req.Data.First.Value = result.InstrumentId
-	if result.Type == 3 {
-		req.Data.Keyword1.Value = "卖出平多"
-	}else {
-		req.Data.Keyword1.Value = "买入平空"
-	}
-	req.Data.Keyword2.Value = viper.GetString("message.version")
-	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
-	req.Data.Remark.Value = "行情爆仓推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
-	i := 0
-	for  {
-		if i > max {
-			break
-		}
-		if len(ch) == 0 {
-			break
-		}
-		req.Data.Remark.Value =req.Data.Remark.Value + LiquidationResult2String(<-ch)
-		i++
-	}
-
-	return req
-}
-
-func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) string {
-	s := fmt.Sprintf("%s","=======================\n")
-	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
-	if result.Type == 3 {
-		s = s+fmt.Sprintf("爆仓类型:%v \n","卖出平多")
-	}else {
-		s = s+fmt.Sprintf("爆仓类型:%v \n","买入平空")
-	}
-	s = s+fmt.Sprintf("时间:%v \n",time.Now().Format("2006/1/2 15:04:05"))
-	s = s+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
-	return s
 }
 
 func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,coin string,n int)  {
@@ -190,12 +153,13 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 		seelog.Error("长度为空")
 		return
 	}
+	//seelog.Info("create",list.LiquidationList[0].CreatedAt)
 	if maps[coin] != list.LiquidationList[0].CreatedAt {
 		maps[coin] = list.LiquidationList[0].CreatedAt
 	}else {
 		return
 	}
-	if n == 1 {
+	if n <= 2 {
 		return
 	}
 	ch <- &list.LiquidationList[0]
@@ -207,13 +171,13 @@ func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,max int){
 		select {
 		case  v:=<-ch :
 			send(ch,v,max)
-			time.Sleep(2*time.Second)
+			time.Sleep(time.Duration(viper.GetInt64("message.sleep"))*time.Second)
 		}
 	}
 }
 
 func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.FuturesInstrumentLiquidationResult,max int)  {
-	req := new(Req)
+	req := new(model.Req)
 	req.Init()
 	req.Make(ch,*result,max)
 	data, err := json.Marshal(req)

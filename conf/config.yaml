@@ -12,6 +12,7 @@ okex:
   endpoint: https://www.okex.me/
   api_key:
   secret_key:
+  enable: 1
 
 ifeige:
   secret:
@@ -27,5 +28,14 @@ message:
   max: 4
   first_send: 1
   version: chauncy_v1.1
-  rate: 500
+  rate: 2
+  sleep: 0
+
+huobi:
+  position:
+    enable: 1
+  api:
+    access_key:
+    secret_key:
+
 
