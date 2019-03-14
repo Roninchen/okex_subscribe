@@ -151,7 +151,7 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 	client := NewOKExClient()
 	list, err := client.GetFuturesInstrumentLiquidation(CoinId, 1,1,0,1)
 	if err!=nil {
-		seelog.Error("爆仓订单：",err)
+		seelog.Error("获取订单：",err)
 		return
 	}
 	if len(list.LiquidationList)<1 {
