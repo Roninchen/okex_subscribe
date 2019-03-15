@@ -57,13 +57,13 @@ func (req *Req)Init() *Req {
 func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int) *Req{
 	req.Data.First.Value = result.InstrumentId
 	if result.Type == 3 {
-		req.Data.Keyword1.Value = "可开多多多多多多多"
+		req.Data.Keyword1.Value = "底部可开多多多多多多多"
 	}else {
-		req.Data.Keyword1.Value = "可开空空空空空空空"
+		req.Data.Keyword1.Value = "顶部可开空空空空空空空"
 	}
 	req.Data.Keyword2.Value = viper.GetString("message.version")
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
-	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
+	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,result.Size)
 	i := 0
 	for  {
 		if i > max {
@@ -82,11 +82,11 @@ func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) s
 	s := fmt.Sprintf("%s","=======================\n")
 	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
 	if result.Type == 3 {
-		s = s+fmt.Sprintf("行情推送类型:%v \n","可开多")
+		s = s+fmt.Sprintf("行情推送类型:%v \n","底部可开多")
 	}else {
-		s = s+fmt.Sprintf("行情推送类型:%v \n","可开空")
+		s = s+fmt.Sprintf("行情推送类型:%v \n","顶部可开空")
 	}
 	s = s+fmt.Sprintf("时间:%v \n",time.Now().Format("2006/1/2 15:04:05"))
-	s = s+fmt.Sprintf("价格:%v 数量:%v \n",result.Price,result.Size)
+	s = s+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,result.Size)
 	return s
 }
