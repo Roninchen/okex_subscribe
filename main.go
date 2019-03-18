@@ -14,13 +14,15 @@ import (
 	"okex/conf"
 	"okex/model"
 	"okex/scheduler"
+	"okex/utils"
 	"time"
 )
 const WXURL = "https://u.ifeige.cn/api/message/send"
 
 
 var maps = make(map[string]string)
-
+var timeMAP = make(map[string]time.Time)
+var client *okex.Client
 
 func init() {
 	maps["BTC"] = ""
@@ -28,6 +30,12 @@ func init() {
 	maps["BCH"] = ""
 	maps["LTC"] = ""
 	maps["EOS"] = ""
+
+	timeMAP["BTC"] = time.Now()
+	timeMAP["ETH"] = time.Now()
+	timeMAP["BCH"] = time.Now()
+	timeMAP["LTC"] = time.Now()
+	timeMAP["EOS"] = time.Now()
 }
 func main() {
 	//init config
@@ -35,6 +43,10 @@ func main() {
 	// Load log.
 	scheduler.SetLogger("logConfig.xml")
 	defer seelog.Flush()
+
+	// init okex client
+	client = NewOKExClient()
+
 
 	//first send button
 	FSB := viper.GetInt("message.first_send")
@@ -53,10 +65,10 @@ func main() {
 	}()
 
 	verifyTickerFuture := time.NewTicker(time.Second * 10)
-	if viper.GetInt("huobi.position.enable") ==1 {
-		go FutureContractPositionWorker(verifyTickerFuture,"EOS")
-		go FutureContractPositionWorker(verifyTickerFuture,"ETH")
-		go FutureContractPositionWorker(verifyTickerFuture,"LTC")
+	if viper.GetInt("future.position.enable") ==1 {
+		go FutureContractPositionWorker(verifyTickerFuture,viper.GetString("coin.eos"))
+		go FutureContractPositionWorker(verifyTickerFuture,viper.GetString("coin.eth"))
+		go FutureContractPositionWorker(verifyTickerFuture,viper.GetString("coin.ltc"))
 	}
 
 	btcChan :=make(chan *okex.FuturesInstrumentLiquidationResult,20)
@@ -77,7 +89,7 @@ func main() {
 	}
 
 	rate := viper.GetInt64("message.rate")
-	verifyTicker := time.NewTicker(time.Second * time.Duration(rate) )
+	verifyTicker := time.NewTicker(time.Millisecond * time.Duration(rate) )
 	seelog.Info("监控开始")
 
 	for _ = range verifyTicker.C {
@@ -96,32 +108,44 @@ func main() {
 }
 
 func FutureContractPositionWorker(t *time.Ticker,coin string) {
-	for _=range t.C{
-		var result struct{
-			Status string `json:"status"`
-			Data   []model.ContractPositionInfo `json:"data"`
-			TS     int64 `json:"ts"`
-		}
-		var Contract []model.ContractPositionInfo
-		jsonStr, response, err := services.FutureContractPositionInfo(coin)
-		if err!=nil {
-			seelog.Info("FutureContractPositionInfo err:",err)
-			continue
-		}
-		seelog.Info("future:",jsonStr)
-		err=json.NewDecoder(response.Body).Decode(&result)
-		if err != nil {
-			seelog.Info("json2Future err:",err)
-			continue
-		}
-		seelog.Info("res:",result)
-		Contract = result.Data
-		for k,v:=range Contract {
-			seelog.Info("==========第",k,"个订单==========")
-			seelog.Info(v)
-			seelog.Info("币种：",v.ContractCode,"收益率：",v.ProfitRate)
-			if v.ProfitRate < 0 {
-				seelog.Info("亏损警报	>>>","币种：",v.ContractCode,"收益率：",v.ProfitRate)
+	for _=range t.C {
+		if viper.GetInt("future.position.okex_huobi") == 1 {
+			futuresPosition, err := client.GetFuturesInstrumentPosition(coin)
+			position, err := client.GetSwapPositionByInstrument("EOS-USD-SWAP")
+			if err!=nil {
+				seelog.Error("okex GetFuturesInstrumentPosition err:",err)
+				continue
+			}
+			seelog.Info("futures:",&futuresPosition.FixedPosition)
+			seelog.Info("swap:",position)
+
+		} else {
+			var result struct {
+				Status string                       `json:"status"`
+				Data   []model.ContractPositionInfo `json:"data"`
+				TS     int64                        `json:"ts"`
+			}
+			var Contract []model.ContractPositionInfo
+			jsonStr, response, err := services.FutureContractPositionInfo(coin)
+			if err != nil {
+				seelog.Info("FutureContractPositionInfo err:", err)
+				continue
+			}
+			seelog.Info("future:", jsonStr)
+			err = json.NewDecoder(response.Body).Decode(&result)
+			if err != nil {
+				seelog.Info("json2Future err:", err)
+				continue
+			}
+			seelog.Info("res:", result)
+			Contract = result.Data
+			for k, v := range Contract {
+				seelog.Info("==========第", k, "个订单==========")
+				seelog.Info(v)
+				seelog.Info("币种：", v.ContractCode, "收益率：", v.ProfitRate)
+				if v.ProfitRate < 0 {
+					seelog.Info("亏损警报	>>>", "币种：", v.ContractCode, "收益率：", v.ProfitRate)
+				}
 			}
 		}
 	}
@@ -132,7 +156,7 @@ func NewOKExClient() *okex.Client {
 	config.Endpoint = "https://www.okex.me/"
 	config.ApiKey = viper.GetString("okex.api_key")
 	config.SecretKey = viper.GetString("okex.secret_key")
-	config.Passphrase = ""
+	config.Passphrase = "okex1qaz"
 	config.TimeoutSecond = 45
 	config.IsPrint = false
 	config.I18n = okex.ENGLISH
@@ -144,47 +168,86 @@ func NewOKExClient() *okex.Client {
 	return client
 }
 
-func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,coin string,n int)  {
+func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,coin string,n int) {
 	// To avoid deadlock, channel must be closed.
 	//defer close(ch)
-
-	client := NewOKExClient()
-	list, err := client.GetFuturesInstrumentLiquidation(CoinId, 1,1,0,1)
-	if err!=nil {
-		seelog.Error("获取订单：",err)
+	list, err := client.GetFuturesInstrumentLiquidation(CoinId, 1, 1, 0, 5)
+	if err != nil {
+		seelog.Error("获取订单：", err)
 		return
 	}
-	if len(list.LiquidationList)<1 {
+	//seelog.Info(CoinId)
+	//seelog.Info("create", list.LiquidationList[0].CreatedAt)
+	//seelog.Info(coin,":",len(list.LiquidationList))
+	if len(list.LiquidationList) < 1 {
 		seelog.Error("长度为空")
 		return
 	}
-	//seelog.Info("create",list.LiquidationList[0].CreatedAt)
 	if maps[coin] != list.LiquidationList[0].CreatedAt {
 		maps[coin] = list.LiquidationList[0].CreatedAt
-	}else {
+	} else {
 		return
 	}
 	if n <= 2 {
+		//seelog.Info("coin",coin,timeMAP[coin])
+		//seelog.Info("new:",utils.StrToTime(list.LiquidationList[0].CreatedAt))
+		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
 		return
 	}
-	ch <- &list.LiquidationList[0]
+	if timeMAP[coin].Before(utils.StrToTime(list.LiquidationList[len(list.LiquidationList)-1].CreatedAt)) {
+		seelog.Info("time before 5")
+		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		for _, v := range list.LiquidationList {
+			ch <- &v
+		}
+	} else if timeMAP[coin].Before(utils.StrToTime(list.LiquidationList[0].CreatedAt)){
+		seelog.Info("time before 1")
+		for _, v := range list.LiquidationList {
+			before := timeMAP[coin].Before(utils.StrToTime(v.CreatedAt))
+			if !before {
+				continue
+			}
+			ch <- &v
+		}
+		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+	}
 	return
 }
 
 func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,max int){
+	var total int
+	var sizeTotal int64
+	ticker := time.NewTicker(time.Second * time.Duration(viper.GetInt("message.reset_total_time")))
+	go func() {
+		for range ticker.C{
+			if total<=viper.GetInt("message.reset_less_then") {
+				total = 0
+				sizeTotal = 0
+			}
+		}
+	}()
 	for {
 		select {
 		case  v:=<-ch :
-			send(ch,v,max)
-			time.Sleep(time.Duration(viper.GetInt64("message.sleep"))*time.Second)
+			total++
+			seelog.Info("有:",v.InstrumentId,"爆单信息:爆单数量为",v.Size)
+			seelog.Info("有爆单信息,累计total为:",total)
+			sizeTotal+=v.Size
+			if total>= viper.GetInt("message.send_size"){
+				send(ch,v,max,sizeTotal)
+				time.Sleep(time.Duration(viper.GetInt64("message.sleep"))*time.Second)
+				total = 0
+				sizeTotal = 0
+			}
 		}
+
 	}
 }
 
-func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.FuturesInstrumentLiquidationResult,max int)  {
+func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.FuturesInstrumentLiquidationResult,max int,sizeTotal int64)  {
 	req := new(model.Req)
 	req.Init()
-	req.Make(ch,*result,max)
+	req.Make(ch,*result,max,sizeTotal)
 	data, err := json.Marshal(req)
 	logs.Info("json:/n",string(data))
 	bytes.NewReader(data)

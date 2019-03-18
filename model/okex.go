@@ -54,7 +54,7 @@ func (req *Req)Init() *Req {
 	return req
 }
 
-func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int) *Req{
+func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int,sizeTotal int64) *Req{
 	req.Data.First.Value = result.InstrumentId
 	if result.Type == 3 {
 		req.Data.Keyword1.Value = "底部可开多多多多多多多"
@@ -63,7 +63,7 @@ func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result ok
 	}
 	req.Data.Keyword2.Value = viper.GetString("message.version")
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
-	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,result.Size)
+	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,result.Size+sizeTotal)
 	i := 0
 	for  {
 		if i > max {
