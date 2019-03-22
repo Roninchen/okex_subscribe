@@ -203,10 +203,12 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 	} else if timeMAP[coin].Before(utils.StrToTime(list.LiquidationList[0].CreatedAt)){
 		seelog.Info("time before 1")
 		for _, v := range list.LiquidationList {
-			before := timeMAP[coin].Before(utils.StrToTime(v.CreatedAt))
+			now := utils.StrToTime(v.CreatedAt)
+			before := timeMAP[coin].Before(now)
 			if !before {
 				continue
 			}
+			seelog.Info("timeMap:",timeMAP[coin],"now:",now)
 			ch <- &v
 		}
 		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
@@ -223,6 +225,7 @@ func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,max int){
 			if total<=viper.GetInt("message.reset_less_then") {
 				total = 0
 				sizeTotal = 0
+				seelog.Info("清零:",total,sizeTotal)
 			}
 		}
 	}()
