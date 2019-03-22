@@ -15,14 +15,15 @@ import (
 	"okex/model"
 	"okex/scheduler"
 	"okex/utils"
+	"sync"
 	"time"
 )
 const WXURL = "https://u.ifeige.cn/api/message/send"
 
 
 var maps = make(map[string]string)
-var timeMAP = make(map[string]time.Time)
 var client *okex.Client
+var TIME = make(map[string]CoinTimeMap)
 
 func init() {
 	maps["BTC"] = ""
@@ -31,11 +32,16 @@ func init() {
 	maps["LTC"] = ""
 	maps["EOS"] = ""
 
-	timeMAP["BTC"] = time.Now()
-	timeMAP["ETH"] = time.Now()
-	timeMAP["BCH"] = time.Now()
-	timeMAP["LTC"] = time.Now()
-	timeMAP["EOS"] = time.Now()
+	TIME["BTC"] = CoinTimeMap{Data:map[string]time.Time{"BTC":time.Now()},Mutex:&sync.Mutex{}}
+	TIME["ETH"] = CoinTimeMap{Data:map[string]time.Time{"ETH":time.Now()},Mutex:&sync.Mutex{}}
+	TIME["BCH"] = CoinTimeMap{Data:map[string]time.Time{"BCH":time.Now()},Mutex:&sync.Mutex{}}
+	TIME["LTC"] = CoinTimeMap{Data:map[string]time.Time{"LTC":time.Now()},Mutex:&sync.Mutex{}}
+	TIME["EOS"] = CoinTimeMap{Data:map[string]time.Time{"EOS":time.Now()},Mutex:&sync.Mutex{}}
+}
+
+type CoinTimeMap struct {
+	*sync.Mutex
+	Data map[string]time.Time
 }
 func main() {
 	//init config
@@ -191,27 +197,32 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 	if n <= 2 {
 		//seelog.Info("coin",coin,timeMAP[coin])
 		//seelog.Info("new:",utils.StrToTime(list.LiquidationList[0].CreatedAt))
-		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		TIME[coin].Data[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
 		return
 	}
-	if timeMAP[coin].Before(utils.StrToTime(list.LiquidationList[len(list.LiquidationList)-1].CreatedAt)) {
+	if TIME[coin].Data[coin].Before(utils.StrToTime(list.LiquidationList[len(list.LiquidationList)-1].CreatedAt)) {
 		seelog.Info("time before 5")
-		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		TIME[coin].Lock()
+		TIME[coin].Data[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		TIME[coin].Unlock()
 		for _, v := range list.LiquidationList {
 			ch <- &v
 		}
-	} else if timeMAP[coin].Before(utils.StrToTime(list.LiquidationList[0].CreatedAt)){
+	} else if TIME[coin].Data[coin].Before(utils.StrToTime(list.LiquidationList[0].CreatedAt)){
 		seelog.Info("time before 1")
+		seelog.Info(list.LiquidationList)
 		for _, v := range list.LiquidationList {
 			now := utils.StrToTime(v.CreatedAt)
-			before := timeMAP[coin].Before(now)
+			before := TIME[coin].Data[coin].Before(now)
 			if !before {
 				continue
 			}
-			seelog.Info("timeMap:",timeMAP[coin],"now:",now)
+			seelog.Info("timeMap:",TIME[coin].Data[coin],"now:",now)
 			ch <- &v
 		}
-		timeMAP[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		TIME[coin].Lock()
+		TIME[coin].Data[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
+		TIME[coin].Unlock()
 	}
 	return
 }
