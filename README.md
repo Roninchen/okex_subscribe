@@ -1,6 +1,6 @@
 ## contribution
 
-### Begin
+### begin
 
 * fork my repository Roninchen/okex_subscribe.git
 * `git clone https://github.com/Roninchen/okex_subscribe.git`
@@ -23,11 +23,11 @@ make push b=mydevbranchname m="one message to commit"
 ```
 
 
-If m is not set, the GIT commit command will not be executed
+if m is not set, the GIT commit command will not be executed
 
 ### modify others pull requset
 
-like i want to modify name=chauncy branch chauncy-fix 的pr
+example: i want to modify name=chauncy branch chauncy-fix 的pr
 
 #### step1: pull
 
