@@ -1,4 +1,8 @@
 .idea
-okex
+
+*.log
+
 .DS_Store
-conf/
+
+okex
+
