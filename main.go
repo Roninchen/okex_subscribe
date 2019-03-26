@@ -205,6 +205,7 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 		TIME[coin].Lock()
 		TIME[coin].Data[coin] = utils.StrToTime(list.LiquidationList[0].CreatedAt)
 		TIME[coin].Unlock()
+		seelog.Info("list:",list.LiquidationList)
 		for _, v := range list.LiquidationList {
 			ch <- &v
 		}

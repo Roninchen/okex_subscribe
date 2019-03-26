@@ -29,7 +29,7 @@ message:
   first_send: 1
   version: chauncy
   #请求bc接口次数,5次／rate 单位毫秒
-  rate: 1000
+  rate: 520
   sleep: 0
   #五条一发
   send_size: 5

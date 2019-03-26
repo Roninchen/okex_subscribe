@@ -1,0 +1,15 @@
+version: '2'
+
+networks:
+  basic:
+
+services:
+  coinmarket:
+    container_name: coinmarket
+    image: okexcoin:v1
+    ports:
+      - "9999:80"
+    volumes:
+      - $HOME/container/go/coinmarket:/okex/log/
+    networks:
+      - basic
