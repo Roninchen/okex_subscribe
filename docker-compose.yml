@@ -5,11 +5,14 @@ networks:
 
 services:
   coinmarket:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: coinmarket
     image: okexcoin:v1
     ports:
       - "9999:80"
     volumes:
-      - $HOME/container/go/coinmarket:/okex/log/
+      - ./log:/go/src/okex/log
     networks:
       - basic
