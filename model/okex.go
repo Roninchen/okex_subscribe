@@ -1,9 +1,16 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/cihub/seelog"
+	"github.com/gin-gonic/gin/json"
+	"github.com/golang/glog"
 	"github.com/okcoin-okex/okex-go-sdk-api"
 	"github.com/spf13/viper"
+	"io/ioutil"
+	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -42,6 +49,20 @@ type remark struct {
 	Value string `json:"value"`
 	Color string `json:"color"`
 }
+
+type MarkDownMsg struct {
+	MsgType string `json:"msgtype"`
+	MarkDownT MarkDown `json:"markdown"`
+	At At `json:"at"`
+}
+type MarkDown struct {
+	Title string `json:"title"`
+	Text string `json:"text"`
+}
+type At struct {
+	AtMobiles []string `json:"atMobiles"`
+	IsAtAll bool `json:"isAtAll"`
+}
 func (req *Req)Init() *Req {
 	req.Secret = viper.GetString("ifeige2.secret")
 	req.AppKey = viper.GetString("ifeige2.app_key")
@@ -56,14 +77,18 @@ func (req *Req)Init() *Req {
 
 func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result okex.FuturesInstrumentLiquidationResult,max int,sizeTotal int64) *Req{
 	req.Data.First.Value = result.InstrumentId
-	if result.Type == 3 {
+	if result.Type == "3" {
 		req.Data.Keyword1.Value = "底部可开多多多多多多多"
 	}else {
 		req.Data.Keyword1.Value = "顶部可开空空空空空空空"
 	}
 	req.Data.Keyword2.Value = viper.GetString("message.version")
 	req.Data.Keyword3.Value = fmt.Sprintf("%s",time.Now().Format("2006/1/2 15:04:05"))
-	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,result.Size+sizeTotal)
+	size, err := strconv.ParseInt(result.Size,10,64)
+	if err != nil {
+		seelog.Info(err)
+	}
+	req.Data.Remark.Value = "行情推送 "+fmt.Sprintf("价格:%v 反弹指数:+%v \n",result.Price,size+sizeTotal)
 	i := 0
 	for  {
 		if i > max {
@@ -78,10 +103,49 @@ func (req *Req)Make(ch <-chan *okex.FuturesInstrumentLiquidationResult,result ok
 
 	return req
 }
+func (req *Req)TestDingDing() {
+	req.Data.First.Value = "Coin"
+	req.Data.Keyword1.Value = "BTC测试1"
+	req.Data.Keyword2.Value = "LTC测试2"
+	req.Data.Keyword3.Value = "ETH测试2"
+	req.Data.Remark.Value = "7日，权游8惊现星巴克受到网友热议，《权力的游戏》第八季目前正在热播中，在昨晚播出的第四集中，竟然出现了星巴克咖啡的镜头，不得不说，这植入广告真的是很隐蔽了。"
+}
+func (req *Req) DingDing() {
+	var md MarkDownMsg
+	md.MsgType = "markdown"
+	md.MarkDownT.Title = req.Data.Keyword1.Value
+	md.MarkDownT.Text = fmt.Sprintf("%s\n%s\n%s\n%s\n%s",
+		"#### "+req.Data.First.Value,
+		"##### "+req.Data.Keyword1.Value,
+		"##### "+req.Data.Keyword2.Value,
+		"##### "+req.Data.Keyword3.Value,
+		"##### "+req.Data.Remark.Value)
+	mdByte, err := json.Marshal(&md)
+	if err != nil {
+		seelog.Error("dingding marshal err",err)
+		return
+	}
+	dingURL := viper.GetString("ding.url")
+	dingRequest, err := http.NewRequest("POST",
+		dingURL,
+		bytes.NewReader(mdByte))
+	//dingRequest, err := http.NewRequest("POST", "https://oapi.dingtalk.com/robot/send?access_token=ab6893afba86b066067cb898d0f5df44ccc56395e02887ac12b159acbb6a74c5", bytes.NewReader(mdByte))
+	if err != nil {
+		glog.Info(dingRequest)
+	}
+	dingRequest.Header.Set("Content-Type", "application/json")
+	dingHTTPClient := http.Client{}
+	dingResp, err := dingHTTPClient.Do(dingRequest)
+	readAll, err := ioutil.ReadAll(dingResp.Body)
+	seelog.Info(string(readAll))
+	return
+}
+
+
 func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) string {
 	s := fmt.Sprintf("%s","=======================\n")
 	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
-	if result.Type == 3 {
+	if result.Type == "3" {
 		s = s+fmt.Sprintf("行情推送类型:%v \n","底部可开多")
 	}else {
 		s = s+fmt.Sprintf("行情推送类型:%v \n","顶部可开空")

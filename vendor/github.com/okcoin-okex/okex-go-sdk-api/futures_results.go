@@ -326,9 +326,9 @@ type FuturesInstrumentLiquidationListResult struct {
 
 type FuturesInstrumentLiquidationResult struct {
 	InstrumentId string  `json:"instrument_id"`
-	Price        float64 `json:"price"`
-	Size         int64   `json:"size"`
-	Loss         float64 `json:"loss"`
+	Price        string `json:"price"`
+	Size         string   `json:"size"`
+	Loss         string `json:"loss"`
 	CreatedAt    string  `json:"created_at"`
-	Type         int64  `json:"type"`
+	Type         string  `json:"type"`
 }

@@ -49,5 +49,7 @@ huobi:
   api:
     access_key:
     secret_key:
+ding:
+  url:
 
 
