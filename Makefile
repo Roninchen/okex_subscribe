@@ -9,7 +9,7 @@ addupstream:
 
 sync:
 	git fetch upstream
-	git checkout master
+	git checkout master/
 	git merge upstream/master
 	git push origin master
 

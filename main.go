@@ -15,6 +15,7 @@ import (
 	"okex/model"
 	"okex/scheduler"
 	"okex/utils"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -69,6 +70,13 @@ func main() {
 			seelog.Info("heartbeat")
 		}
 	}()
+
+	//dingTicker := time.NewTicker(time.Second * 5)
+	//go func() {
+	//	for _ = range dingTicker.C {
+	//		testDingDing()
+	//	}
+	//}()
 
 	verifyTickerFuture := time.NewTicker(time.Second * 10)
 	if viper.GetInt("future.position.enable") ==1 {
@@ -184,7 +192,7 @@ func MarketRun(ch chan<- *okex.FuturesInstrumentLiquidationResult,CoinId string,
 	}
 	//seelog.Info(CoinId)
 	//seelog.Info("create", list.LiquidationList[0].CreatedAt)
-	//seelog.Info(coin,":",len(list.LiquidationList))
+	//seelog.Info(coin,":",list.LiquidationList)
 	if len(list.LiquidationList) < 1 {
 		seelog.Error("长度为空")
 		return
@@ -247,7 +255,8 @@ func sendWork(ch <-chan *okex.FuturesInstrumentLiquidationResult,max int){
 			total++
 			seelog.Info("有:",v.InstrumentId,"爆单信息:爆单数量为",v.Size)
 			seelog.Info("有爆单信息,累计total为:",total)
-			sizeTotal+=v.Size
+			size, _ := strconv.ParseInt(v.Size, 10, 64)
+			sizeTotal+=size
 			if total>= viper.GetInt("message.send_size"){
 				send(ch,v,max,sizeTotal)
 				time.Sleep(time.Duration(viper.GetInt64("message.sleep"))*time.Second)
@@ -265,6 +274,7 @@ func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.Future
 	req.Make(ch,*result,max,sizeTotal)
 	data, err := json.Marshal(req)
 	logs.Info("json:/n",string(data))
+	go req.DingDing()
 	bytes.NewReader(data)
 	request, err := http.NewRequest("POST", WXURL, bytes.NewReader(data))
 	if err != nil {
@@ -287,4 +297,11 @@ func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.Future
 	}
 
 	seelog.Info("list:/n",*result)
+}
+
+func testDingDing()  {
+	req := new(model.Req)
+	req.Init()
+	req.TestDingDing()
+	go req.DingDing()
 }
