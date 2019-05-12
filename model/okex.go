@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	m "okex/ichat/model"
+	s "okex/ichat/service"
 )
 
 type Req struct {
@@ -139,6 +141,30 @@ func (req *Req) DingDing() {
 	readAll, err := ioutil.ReadAll(dingResp.Body)
 	seelog.Info(string(readAll))
 	return
+}
+
+func(req *Req) WeiXin(WeixinLogin *m.LoginMap)  {
+	if ! WeixinLogin.IsLogin {
+		seelog.Info("微信未登陆... 退出")
+		return
+	}
+	seelog.Info("微信已登陆... ")
+	wxSendMsg := m.WxSendMsg{}
+	wxSendMsg.Type = 1
+	wxSendMsg.Content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n",
+		"#### "+req.Data.First.Value,
+		"##### "+req.Data.Keyword1.Value,
+		"##### "+req.Data.Keyword2.Value,
+		"##### "+req.Data.Keyword3.Value,
+		"##### "+req.Data.Remark.Value)
+	wxSendMsg.FromUserName = WeixinLogin.FormMe
+	wxSendMsg.ToUserName = WeixinLogin.SendTo
+	fmt.Println("打印 To UserName:",wxSendMsg.ToUserName)
+	//zbc = wxSendMsg.ToUserName
+	wxSendMsg.LocalID = fmt.Sprintf("%d", time.Now().Unix())
+	wxSendMsg.ClientMsgId = wxSendMsg.LocalID
+	msg := s.SendMsg(WeixinLogin, wxSendMsg)
+	seelog.Info("weixin err",msg)
 }
 
 
