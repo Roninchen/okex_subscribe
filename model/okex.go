@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"github.com/cihub/seelog"
 	"github.com/gin-gonic/gin/json"
-	"github.com/golang/glog"
 	"github.com/okcoin-okex/okex-go-sdk-api"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
-	"strconv"
-	"time"
 	m "okex/ichat/model"
 	s "okex/ichat/service"
+	"strconv"
+	"time"
 )
 
 type Req struct {
@@ -133,7 +132,7 @@ func (req *Req) DingDing() {
 		bytes.NewReader(mdByte))
 	//dingRequest, err := http.NewRequest("POST", "https://oapi.dingtalk.com/robot/send?access_token=ab6893afba86b066067cb898d0f5df44ccc56395e02887ac12b159acbb6a74c5", bytes.NewReader(mdByte))
 	if err != nil {
-		glog.Info(dingRequest)
+		seelog.Info(dingRequest)
 	}
 	dingRequest.Header.Set("Content-Type", "application/json")
 	dingHTTPClient := http.Client{}
