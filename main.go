@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"okex/conf"
+	"okex/ichat"
 	"okex/model"
 	"okex/scheduler"
 	"okex/utils"
@@ -45,6 +46,7 @@ type CoinTimeMap struct {
 	Data map[string]time.Time
 }
 func main() {
+	go ichat.Weixin()
 	//init config
 	conf.Init("config")
 	// Load log.
@@ -74,7 +76,7 @@ func main() {
 	//dingTicker := time.NewTicker(time.Second * 5)
 	//go func() {
 	//	for _ = range dingTicker.C {
-	//		testDingDing()
+	//		testWeiXin()
 	//	}
 	//}()
 
@@ -275,6 +277,7 @@ func send(ch <-chan *okex.FuturesInstrumentLiquidationResult,result *okex.Future
 	data, err := json.Marshal(req)
 	logs.Info("json:/n",string(data))
 	go req.DingDing()
+	go req.WeiXin(&ichat.LoginMap)
 	bytes.NewReader(data)
 	request, err := http.NewRequest("POST", WXURL, bytes.NewReader(data))
 	if err != nil {
@@ -304,4 +307,11 @@ func testDingDing()  {
 	req.Init()
 	req.TestDingDing()
 	go req.DingDing()
+}
+func testWeiXin()  {
+	req := new(model.Req)
+	req.Init()
+	req.TestDingDing()
+	time.Sleep(3)
+	req.WeiXin(&ichat.LoginMap)
 }
