@@ -52,6 +52,11 @@
 			"revisionTime": "2018-08-30T22:02:26Z"
 		},
 		{
+			"checksumSHA1": "woO1qIxIeQ1bcbPSiMfAKk3r4xg=",
+			"path": "github.com/gin-gonic/gin/json",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "EFilcRi6b0Bf3nckKo3UbeqoW50=",
 			"path": "github.com/gorilla/websocket",
 			"revision": "95ba29eb981bbb27d92e1f70bf8a1949452d926b",
