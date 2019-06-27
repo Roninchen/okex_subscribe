@@ -91,7 +91,7 @@ func Weixin() {
 
 	fmt.Println("开始监听消息响应...")
 	var retcode, selector int64
-	regAt := regexp.MustCompile(`^@.*@.*我不是中本聪 开启.*$`) /* 群聊时其他人说话时会在前面加上@XXX */
+	regAt := regexp.MustCompile(`^@.*@.*我不是中本聪.*$`) /* 群聊时其他人说话时会在前面加上@XXX */
 	regGroup := regexp.MustCompile(`^@@.+`)
 	regAd := regexp.MustCompile(`(朋友圈|点赞)+`)
 	secretCode := "cmd"
@@ -123,7 +123,7 @@ func Weixin() {
 						/* 有人在群里@我，发个消息回答一下 */
 						wxSendMsg := m.WxSendMsg{}
 						wxSendMsg.Type = 1
-						wxSendMsg.Content = "我是我不是中本聪编写的微信机器人，我已帮你通知我的主人，请您稍等片刻，他会跟您联系，已自动开启服务"
+						wxSendMsg.Content = "各位客官，微信机器人已自动开启服务"
 						wxSendMsg.FromUserName = wxRecvMsges.MsgList[i].ToUserName
 						wxSendMsg.ToUserName = wxRecvMsges.MsgList[i].FromUserName
 						fmt.Println("打印 To UserName:",wxSendMsg.ToUserName)
@@ -138,7 +138,6 @@ func Weixin() {
 						/* 加点延时，避免消息次序混乱，同时避免微信侦察到机器人 */
 						time.Sleep(time.Second)
 						go s.SendMsg(&LoginMap, wxSendMsg)
-						return
 					} else if (!regGroup.MatchString(wxRecvMsges.MsgList[i].FromUserName)) && regAd.MatchString(wxRecvMsges.MsgList[i].Content) {
 						/* 有人私聊我，并且内容含有「朋友圈」、「点赞」等敏感词，则回复 */
 						wxSendMsg := m.WxSendMsg{}

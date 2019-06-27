@@ -46,9 +46,12 @@ type CoinTimeMap struct {
 	Data map[string]time.Time
 }
 func main() {
-	go ichat.Weixin()
 	//init config
 	conf.Init("config")
+
+	if viper.GetInt("wechat.robot") == 1 {
+		go ichat.Weixin()
+	}
 	// Load log.
 	scheduler.SetLogger("logConfig.xml")
 	defer seelog.Flush()
@@ -170,9 +173,9 @@ func FutureContractPositionWorker(t *time.Ticker,coin string) {
 func NewOKExClient() *okex.Client {
 	var config okex.Config
 	config.Endpoint = "https://www.okex.me/"
-	config.ApiKey = viper.GetString("okex.api_key")
-	config.SecretKey = viper.GetString("okex.secret_key")
-	config.Passphrase = "okex1qaz"
+	//config.ApiKey = viper.GetString("okex.api_key")
+	//config.SecretKey = viper.GetString("okex.secret_key")
+	//config.Passphrase = "okex1qaz"
 	config.TimeoutSecond = 45
 	config.IsPrint = false
 	config.I18n = okex.ENGLISH
