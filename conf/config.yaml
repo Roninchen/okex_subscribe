@@ -2,11 +2,11 @@ weixin:
   wxurl: https://u.ifeige.cn/api/message/send
 
 coin:
-  btc: BTC-USD-190628
-  eth: ETH-USD-190628
-  bch: BCH-USD-190628
-  eos: EOS-USD-190628
-  ltc: LTC-USD-190628
+  btc: BTC-USD-190927
+  eth: ETH-USD-190927
+  bch: BCH-USD-190927
+  eos: EOS-USD-190927
+  ltc: LTC-USD-190927
 
 okex:
   endpoint: https://www.okex.me/
@@ -27,7 +27,7 @@ ifeige2:
 message:
   max: 4
   first_send: 1
-  version: chauncy
+  version: local
   #请求bc接口次数,5次／rate 单位毫秒
   rate: 520
   sleep: 0
@@ -41,15 +41,17 @@ message:
 future:
   position:
     # 开启查询
-    enable: 1
+    enable: 0
     # 1查询okex 合约持仓
-    okex_huobi: 1
+    okex_huobi: 0
 
 huobi:
   api:
     access_key:
     secret_key:
 ding:
-  url:
+  url: cb89a5e749e150f9f7365e928
+wechat:
+  robot: 0
 
 

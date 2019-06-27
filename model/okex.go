@@ -151,11 +151,11 @@ func(req *Req) WeiXin(WeixinLogin *m.LoginMap)  {
 	wxSendMsg := m.WxSendMsg{}
 	wxSendMsg.Type = 1
 	wxSendMsg.Content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n",
-		"#### "+req.Data.First.Value,
-		"##### "+req.Data.Keyword1.Value,
-		"##### "+req.Data.Keyword2.Value,
-		"##### "+req.Data.Keyword3.Value,
-		"##### "+req.Data.Remark.Value)
+		""+req.Data.First.Value,
+		""+req.Data.Keyword1.Value,
+		""+req.Data.Keyword2.Value,
+		""+req.Data.Keyword3.Value,
+		""+req.Data.Remark.Value)
 	wxSendMsg.FromUserName = WeixinLogin.FormMe
 	wxSendMsg.ToUserName = WeixinLogin.SendTo
 	fmt.Println("打印 To UserName:",wxSendMsg.ToUserName)
@@ -168,7 +168,7 @@ func(req *Req) WeiXin(WeixinLogin *m.LoginMap)  {
 
 
 func LiquidationResult2String(result *okex.FuturesInstrumentLiquidationResult) string {
-	s := fmt.Sprintf("%s","=======================\n")
+	s := fmt.Sprintf("%s","====================\n")
 	s = s+fmt.Sprintf("币对:%v \n",result.InstrumentId)
 	if result.Type == "3" {
 		s = s+fmt.Sprintf("行情推送类型:%v \n","底部可开多")
